@@ -1,8 +1,5 @@
 package ai.turbochain.ipex.wallet.utils;
 
-import ai.turbochain.ipex.wallet.entity.BitCoinBlock;
-import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONObject;
 import org.apache.commons.lang.StringUtils;
 import org.apache.http.HttpStatus;
 import org.apache.http.client.ClientProtocolException;
@@ -20,13 +17,6 @@ import java.io.PrintWriter;
 import java.net.URL;
 import java.net.URLConnection;
 
-
-/**
- * Copyright (c) 2018-2019 http://www.bcvet.com
- *
- * @author liudan
- * @version alpha
- */
 @Configuration
 public class HttpRequest {
 
@@ -94,42 +84,10 @@ public class HttpRequest {
         return result;
     }
 
-    public static void main(String[] args) {
-//        //发送 POST 请求
-//        String sr1=HttpRequest.sendPost(appContext + "/jobinfo/trigger", "id=26");
-//        System.out.println(sr1);
-//
-//        JobInfo jobInfo = new JobInfo();
-//        jobInfo.setJobGroup(2);
-//        jobInfo.setJobDesc("javaSaveTest");
-//        jobInfo.setExecutorRouteStrategy("FIRST");
-//        jobInfo.setJobCron("1 1 1 * * ? *");
-//        jobInfo.setGlueType("BEAN");
-//        jobInfo.setExecutorHandler("demoJobHandler");
-//        jobInfo.setExecutorParam("requestId");//此处存放requestId
-//        jobInfo.setChildJobKey("1_1");
-//        jobInfo.setExecutorBlockStrategy("SERIAL_EXECUTION");
-//        jobInfo.setExecutorFailStrategy("FAIL_ALARM");
-//        jobInfo.setAuthor("admin");
-//        Map<String,Object> map = new HashMap<String, Object>();
-//        MyBeanUtils.copyBean2Map(map,jobInfo);
-//
-//        StringBuffer postParamBuffer = new StringBuffer();
-//        for (Map.Entry<String, Object> entry : map.entrySet()) {
-//            postParamBuffer.append("&");
-//            postParamBuffer.append(entry.getKey());
-//            postParamBuffer.append("=");
-//            postParamBuffer.append(entry.getValue());
-//        }
-//        System.out.print(postParamBuffer.toString());
-//        String sr=HttpRequest.sendPost(appContext + "/jobinfo/add", postParamBuffer.toString().substring(1));
-//        System.out.println("str:" + sr);
-//        JSONObject jasonObject = JSONObject.fromObject(sr);
-//        Map mapRestut = (Map)jasonObject;
-//        System.out.println("str:" + mapRestut.get("code") + "--" + mapRestut.get("content"));
-        String str = sendGetData("https://blockchain.info/block-height/593323?format=json","");
-        System.out.println("str: " + str);
-    }
+//    public static void main(String[] args) {
+//        String str = sendGetData("https://blockchain.info/block-height/593323?format=json","");
+//        System.out.println("str: " + str);
+//    }
 
     /**
      * get请求传输数据
