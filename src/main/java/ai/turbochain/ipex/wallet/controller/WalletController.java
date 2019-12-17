@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.alibaba.fastjson.JSONObject;
@@ -61,7 +62,8 @@ public class WalletController {
 	 * @return
 	 */
 	@GetMapping("address/{account}")
-	public MessageResult createWallet(@PathVariable String account, String password, String priv, String email) {
+	public MessageResult createWallet(@PathVariable String account,
+			@RequestParam(required = false, defaultValue = "6MvxHSjAsb") String password, String priv, String email) {
 		logger.info("create new wallet:password={},priv={},label={},email={}", password, priv, account, email);
 		try {
 			String url = Constant.ACT_CREATE_WALLET + Constant.PWD_PARAM + password + Constant.APICODE_PARAM
