@@ -1,7 +1,10 @@
 package ai.turbochain.ipex.wallet.controller;
 
 import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.util.List;
 
+import org.bitcoinj.core.Coin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,12 +15,15 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.alibaba.fastjson.JSONObject;
-import com.spark.blockchain.rpcclient.BitcoinRPCClient;
-import com.spark.blockchain.rpcclient.BitcoinUtil;
 
 import ai.turbochain.ipex.wallet.config.Constant;
+import ai.turbochain.ipex.wallet.entity.Account;
+import ai.turbochain.ipex.wallet.entity.BalanceData;
+import ai.turbochain.ipex.wallet.entity.BtcBean;
 import ai.turbochain.ipex.wallet.service.AccountService;
+import ai.turbochain.ipex.wallet.service.UTXOTransactionService;
 import ai.turbochain.ipex.wallet.util.MessageResult;
+import ai.turbochain.ipex.wallet.utils.BTCAccountGenerator;
 import ai.turbochain.ipex.wallet.utils.HttpRequest;
 
 @RestController
@@ -26,10 +32,11 @@ public class WalletController {
 	private Logger logger = LoggerFactory.getLogger(WalletController.class);
 
 	@Autowired
-	private BitcoinRPCClient rpcClient;
-
-	@Autowired
 	private AccountService accountService;
+	@Autowired
+	private UTXOTransactionService utxoTransactionService;
+	@Autowired
+	private BTCAccountGenerator btcAccountGenerator;
 
 	/**
 	 * 获取链最新区块高度
@@ -63,24 +70,13 @@ public class WalletController {
 	 */
 	@GetMapping("address/{account}")
 	public MessageResult createWallet(@PathVariable String account,
-			@RequestParam(required = false, defaultValue = "6MvxHSjAsb") String password, String priv, String email) {
-		logger.info("create new wallet:password={},priv={},label={},email={}", password, priv, account, email);
+			@RequestParam(required = false, defaultValue = "") String password) {
+		logger.info("create new wallet:account={},password={}", account, password);
 		try {
-			String url = Constant.ACT_CREATE_WALLET + Constant.PWD_PARAM + password + Constant.APICODE_PARAM
-					+ Constant.LABLE_PARAM + account;
-			if (priv != null && priv.isEmpty() == false) {
-				url += Constant.PRIV_PARAM + priv;
-			}
-			if (email != null && email.isEmpty() == false) {
-				url += Constant.EMAIL_PARAM + email;
-			}
-			String createWalletData = HttpRequest.sendGetData(url, "");
-			JSONObject jsonResult = JSONObject.parseObject(createWalletData);
-			logger.info(createWalletData);
-			accountService.saveOne(account, jsonResult.getString("address"), password, jsonResult.getString("guid"),
-					priv, email);
+			BtcBean btcBean = btcAccountGenerator.createBtcAccount();
+			accountService.saveOne(account, btcBean.getFile(), btcBean.getBtcAddress(), "");
 			MessageResult result = new MessageResult(0, "success");
-			result.setData(jsonResult.getString("address"));
+			result.setData(btcBean.getBtcAddress());
 			return result;
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -89,13 +85,19 @@ public class WalletController {
 	}
 
 	@GetMapping({ "transfer", "withdraw" })
-	public MessageResult withdraw(String address, BigDecimal amount, BigDecimal fee) {
-		logger.info("withdraw:address={},amount={},fee={}", address, amount, fee);
+	public MessageResult withdraw(String senderAddr, String receiveAddr, BigDecimal amount) {
+		logger.info("withdraw:senderAddr={},receiveAddr={},amount={}", senderAddr, receiveAddr, amount);
 		if (amount.compareTo(BigDecimal.ZERO) <= 0) {
-			return MessageResult.error(500, "额度须大于0");
+			return MessageResult.error(500, "提现额度须大于0");
 		}
+		Account account = accountService.findByAddress(senderAddr);
+		if (account == null) {
+			return MessageResult.error(500, "请传入正确的转账地址" + senderAddr);
+		}
+		BigInteger cong = amount.multiply(new BigDecimal("10").pow(8)).toBigInteger();
 		try {
-			String txid = BitcoinUtil.sendTransaction(rpcClient, address, amount, fee);
+			String txid = utxoTransactionService.getBtcUtxo(account.getWalletFile(), senderAddr, receiveAddr,
+					Coin.valueOf(cong.longValue()));
 			MessageResult result = new MessageResult(0, "success");
 			result.setData(txid);
 			return result;
@@ -108,8 +110,7 @@ public class WalletController {
 	@GetMapping("balance")
 	public MessageResult balance() {
 		try {
-			BigDecimal balance = new BigDecimal(rpcClient.getBalance());
-
+			BigDecimal balance = accountService.findBalanceSum();
 			MessageResult result = new MessageResult(0, "success");
 			result.setData(balance);
 			return result;
@@ -122,11 +123,13 @@ public class WalletController {
 	@GetMapping("balance/{address}")
 	public MessageResult balance(@PathVariable String address) {
 		try {
-			String account = rpcClient.getAccount(address);
-			System.out.println("account=" + account + ",address=" + address);
-			BigDecimal balance = new BigDecimal(rpcClient.getBalance(account));
+			List<BalanceData> balanceList = utxoTransactionService.getBalance(address);
+			BigDecimal balances = new BigDecimal("0");
+			for (BalanceData balance : balanceList) {
+				balances = balances.add(new BigDecimal(balance.getFinalBalance()));
+			}
 			MessageResult result = new MessageResult(0, "success");
-			result.setData(balance);
+			result.setData(balances);
 			return result;
 		} catch (Exception e) {
 			e.printStackTrace();

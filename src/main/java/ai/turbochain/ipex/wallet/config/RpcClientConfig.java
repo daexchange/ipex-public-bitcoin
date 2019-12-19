@@ -19,11 +19,11 @@ import java.net.MalformedURLException;
 /**
  * 初始化RPC客户端
  */
-@Configuration
+//@Configuration
 public class RpcClientConfig {
     private Logger logger = LoggerFactory.getLogger(RpcClientConfig.class);
 
-    @Bean
+   // @Bean
     public BitcoinRPCClient setClient(@Value("${coin.rpc}") String uri){
         try {
             logger.info("uri={}",uri);
