@@ -117,7 +117,6 @@ public class BTCAccountGenerator {
 		DeterministicSeed deterministicSeed = BTCAccountGenerator.createRandomDeterministicSeed("");
 		List<String> mnemonicList = deterministicSeed.getMnemonicCode();
 		String mnemonic = BTCAccountGenerator.mnemonic2String(mnemonicList);
-		System.out.println("mnemonic: " + mnemonic);
 		// 生成eckey
 		ECKey ecKey = BTCAccountGenerator.generateECKey(deterministicSeed);
 		// 解析公钥

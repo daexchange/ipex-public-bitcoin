@@ -15,6 +15,7 @@ import ai.turbochain.ipex.wallet.config.Constant;
 import ai.turbochain.ipex.wallet.entity.Deposit;
 import ai.turbochain.ipex.wallet.service.AccountService;
 import ai.turbochain.ipex.wallet.utils.HttpRequest;
+import jnr.ffi.Struct.int16_t;
 
 @Component
 public class BitcoinWatcher extends Watcher {
@@ -38,6 +39,23 @@ public class BitcoinWatcher extends Watcher {
 				for (int i = 0; i < txList.size(); i++) {
 					JSONObject txObj = txList.getJSONObject(i);
 					String txHash = txObj.getString("hash");
+					JSONArray inputsArray = txObj.getJSONArray("inputs");
+					Boolean flag = false;
+					for (int j = 0; j < inputsArray.size(); j++) {
+						JSONObject input = inputsArray.getJSONObject(j);
+						JSONObject prevout = input.getJSONObject("prev_out");
+						if (prevout == null) {
+							continue;
+						}
+						String address = prevout.getString("addr");
+						if (StringUtils.isNotBlank(address) && accountService.isAddressExist(address)) {
+							flag = true;
+							break;
+						}
+					}
+					if (flag == true) {
+						continue;
+					}
 					JSONArray outArray = txObj.getJSONArray("out");
 					for (int j = 0; j < outArray.size(); j++) {
 						JSONObject out = outArray.getJSONObject(j);
