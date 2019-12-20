@@ -85,8 +85,8 @@ public class WalletController {
 	}
 
 	@GetMapping({ "transfer", "withdraw" })
-	public MessageResult withdraw(String username, String receiveAddr, BigDecimal amount) {
-		logger.info("withdraw:uid={},receiveAddr={},amount={}", username, receiveAddr, amount);
+	public MessageResult withdraw(String username, String address, BigDecimal amount) {
+		logger.info("withdraw:uid={},receiveAddr={},amount={}", username, address, amount);
 		if (amount.compareTo(BigDecimal.ZERO) <= 0) {
 			return MessageResult.error(500, "提现额度须大于0");
 		}
@@ -96,7 +96,7 @@ public class WalletController {
 		}
 		BigInteger cong = amount.multiply(new BigDecimal("10").pow(8)).toBigInteger();
 		try {
-			String txid = utxoTransactionService.getBtcUtxo(account.getWalletFile(), account.getAddress(), receiveAddr,
+			String txid = utxoTransactionService.getBtcUtxo(account.getWalletFile(), account.getAddress(), address,
 					Coin.valueOf(cong.longValue()));
 			MessageResult result = new MessageResult(0, "success");
 			result.setData(txid);
