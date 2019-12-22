@@ -12,23 +12,28 @@ import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 
 import ai.turbochain.ipex.wallet.config.Constant;
+import ai.turbochain.ipex.wallet.entity.BalanceData;
 import ai.turbochain.ipex.wallet.entity.Deposit;
 import ai.turbochain.ipex.wallet.service.AccountService;
+import ai.turbochain.ipex.wallet.service.UTXOTransactionService;
 import ai.turbochain.ipex.wallet.utils.HttpRequest;
-import jnr.ffi.Struct.int16_t;
 
 @Component
 public class BitcoinWatcher extends Watcher {
 	@Autowired
 	private AccountService accountService;
+	@Autowired
+	private UTXOTransactionService utxoTransactionService;
 	// 比特币单位转换聪
 	private BigDecimal bitcoin = new BigDecimal("100000000");
+	//private BlockExplorer blockExplorer = new BlockExplorer();
 
 	@Override
 	public List<Deposit> replayBlock(Long startBlockNumber, Long endBlockNumber) {
 		List<Deposit> deposits = new ArrayList<Deposit>();
 		try {
 			for (Long blockHeight = startBlockNumber; blockHeight <= endBlockNumber; blockHeight++) {
+				System.out.println("区块"+blockHeight);
 				String blockHeightData = HttpRequest
 						.sendGetData(Constant.ACT_BLOCKNO_HEIGHT + blockHeight + Constant.FORMAT_PARAM, "");
 				JSONObject jsonObject = JSONObject.parseObject(blockHeightData);
@@ -48,8 +53,16 @@ public class BitcoinWatcher extends Watcher {
 							continue;
 						}
 						String address = prevout.getString("addr");
+						
 						if (StringUtils.isNotBlank(address) && accountService.isAddressExist(address)) {
 							flag = true;
+							//BigDecimal balance = new BigDecimal(blockExplorer.getAddress(address).getFinalBalance());
+							List<BalanceData> balanceList = utxoTransactionService.getBalance(address);
+							BigDecimal balances = new BigDecimal("0");
+							for (BalanceData balance : balanceList) {
+								balances = balances.add(new BigDecimal(balance.getFinalBalance()));
+							}
+							accountService.updateBTCBalance(address, balances);
 							break;
 						}
 					}
@@ -71,6 +84,16 @@ public class BitcoinWatcher extends Watcher {
 							deposit.setAmount(amount);
 							deposit.setTime(txObj.getDate("time"));
 							deposits.add(deposit);
+							try {
+								List<BalanceData> balanceList = utxoTransactionService.getBalance(address);
+								BigDecimal balances = new BigDecimal("0");
+								for (BalanceData balance : balanceList) {
+									balances = balances.add(new BigDecimal(balance.getFinalBalance()));
+								}
+								accountService.updateBTCBalance(address, balances);
+							} catch (Exception e) {
+								e.printStackTrace();
+							}
 						}
 					}
 				}

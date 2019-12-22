@@ -1,6 +1,7 @@
 package ai.turbochain.ipex.wallet.service;
 
 import java.io.File;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
@@ -22,6 +23,7 @@ import org.bitcoinj.wallet.Wallet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.spongycastle.util.encoders.Hex;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.alibaba.fastjson.JSONObject;
@@ -36,7 +38,9 @@ import com.osp.blockchain.btc.util.BtcException;
 import com.osp.blockchain.btc.util.ConversionUtils;
 import com.osp.blockchain.http.HttpUtil;
 
+import ai.turbochain.ipex.wallet.entity.Account;
 import ai.turbochain.ipex.wallet.entity.BalanceData;
+import ai.turbochain.ipex.wallet.util.MessageResult;
 import info.blockchain.api.pushtx.PushTx;
 
 @Service
@@ -47,6 +51,9 @@ public class UTXOTransactionService {
 	BtcInterface btcInterface = BtcClient.getInterface();
 
 	private NetworkParameters params;
+
+	@Autowired
+	private AccountService accountService;
 
 	public UTXOTransactionService() {
 		params = MainNetParams.get();
@@ -85,7 +92,6 @@ public class UTXOTransactionService {
 			sendRequest.changeAddress = LegacyAddress.fromBase58(params, sendAddr);
 			// 设置手续费
 			sendRequest.feePerKb = Coin.valueOf(2000);
-			System.out.println(wallet);
 			// 签名等操作，完成tx
 			wallet.completeTx(sendRequest);
 			// 对外广播的hex
@@ -108,6 +114,52 @@ public class UTXOTransactionService {
 			e.printStackTrace();
 			return "";
 		}
+	}
+
+	public MessageResult transferFromWallet(String receiveAddr, Coin value, BigDecimal minAmount, BigDecimal fee) {
+		logger.info("transferFromWallet 方法");
+		BigDecimal amount = new BigDecimal(value.getValue());
+		List<Account> accounts = accountService.findByBalance(minAmount);
+		if (accounts == null || accounts.size() == 0) {
+			MessageResult messageResult = new MessageResult(500, "没有满足条件的转账账户(大于0.001)!");
+			logger.info(messageResult.toString());
+			return messageResult;
+		}
+		String txnHashString = "";
+		BigDecimal transferredAmount = BigDecimal.ZERO;
+		for (Account account : accounts) {
+			BigDecimal realAmount = account.getBalance().subtract(fee);
+			if (realAmount.compareTo(amount.subtract(transferredAmount)) > 0) {
+				realAmount = amount.subtract(transferredAmount);
+			}
+			try {
+				String txid = this.getBtcUtxo(account.getWalletFile(), account.getAddress(), receiveAddr,
+						Coin.valueOf(realAmount.longValue()));
+				if (StringUtils.isNotEmpty(txid)) {
+					logger.info("transfer address={},amount={},txid={}", account.getAddress(), realAmount, txid);
+					transferredAmount = transferredAmount.add(realAmount);
+					txnHashString = txnHashString + txid + ",";
+					try {
+						List<BalanceData> balanceList = this.getBalance(account.getAddress());
+						BigDecimal balances = new BigDecimal("0");
+						for (BalanceData balance : balanceList) {
+							balances = balances.add(new BigDecimal(balance.getFinalBalance()));
+						}
+						accountService.updateBTCBalance(account.getAddress(), balances);
+					} catch (Exception e) {
+						e.printStackTrace();
+					}
+				}
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+			if (transferredAmount.compareTo(amount) >= 0) {
+				break;
+			}
+		}
+		MessageResult result = new MessageResult(0, "success");
+		result.setData(txnHashString.substring(0, txnHashString.length() - 1));
+		return result;
 	}
 
 	public String getBtcUtxo(String filePath, String sendAddr, String receiveAddr, Coin value) throws Exception {

@@ -37,6 +37,8 @@ public class WalletController {
 	private UTXOTransactionService utxoTransactionService;
 	@Autowired
 	private BTCAccountGenerator btcAccountGenerator;
+	@Autowired
+	private ai.turbochain.ipex.wallet.entity.Coin coins;
 
 	/**
 	 * 获取链最新区块高度
@@ -86,9 +88,12 @@ public class WalletController {
 
 	@GetMapping({ "transfer", "withdraw" })
 	public MessageResult withdraw(String username, String address, BigDecimal amount) {
-		logger.info("withdraw:uid={},receiveAddr={},amount={}", username, address, amount);
-		if (amount.compareTo(BigDecimal.ZERO) <= 0) {
-			return MessageResult.error(500, "提现额度须大于0");
+		BigDecimal minAmount = coins.getMinCollectAmount().multiply(new BigDecimal("10").pow(8));
+		BigDecimal fee = new BigDecimal("0.001").multiply(new BigDecimal("10").pow(8));
+		logger.info("withdraw:uid={},receiveAddr={},amount={},minAmount={},fee={}", username, address, amount,
+				minAmount, fee);
+		if (amount.compareTo(coins.getMinCollectAmount()) <= 0) {
+			return MessageResult.error(500, "提现额度须大于" + coins.getMinCollectAmount());
 		}
 		Account account = accountService.findByName(username);
 		if (account == null) {
@@ -96,15 +101,21 @@ public class WalletController {
 		}
 		BigInteger cong = amount.multiply(new BigDecimal("10").pow(8)).toBigInteger();
 		try {
-			String txid = utxoTransactionService.getBtcUtxo(account.getWalletFile(), account.getAddress(), address,
-					Coin.valueOf(cong.longValue()));
-			MessageResult result = new MessageResult(0, "success");
-			result.setData(txid);
+			// String txid = utxoTransactionService.getBtcUtxo(account.getWalletFile(),
+			// account.getAddress(), address,
+			// Coin.valueOf(cong.longValue()));
+			MessageResult result = utxoTransactionService.transferFromWallet(address, Coin.valueOf(cong.longValue()),
+					minAmount, fee);
 			return result;
 		} catch (Exception e) {
 			e.printStackTrace();
 			return MessageResult.error(500, "error:" + e.getMessage());
 		}
+	}
+
+	public static void main(String[] args) {
+		BigDecimal fee = new BigDecimal("0.001").multiply(new BigDecimal("10").pow(8));
+		System.out.println(fee);
 	}
 
 	@GetMapping("balance")
@@ -130,6 +141,8 @@ public class WalletController {
 			}
 			MessageResult result = new MessageResult(0, "success");
 			result.setData(balances);
+			// BlockExplorer blockExplorer = new BlockExplorer();
+			// result.setData(blockExplorer.getAddress(address).getFinalBalance());
 			return result;
 		} catch (Exception e) {
 			e.printStackTrace();
