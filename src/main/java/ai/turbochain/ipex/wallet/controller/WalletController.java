@@ -89,7 +89,7 @@ public class WalletController {
 	@GetMapping({ "transfer", "withdraw" })
 	public MessageResult withdraw(String username, String address, BigDecimal amount) {
 		BigDecimal minAmount = coins.getMinCollectAmount().multiply(new BigDecimal("10").pow(8));
-		BigDecimal fee = new BigDecimal("0.001").multiply(new BigDecimal("10").pow(8));
+		BigDecimal fee = new BigDecimal("2000");
 		logger.info("withdraw:uid={},receiveAddr={},amount={},minAmount={},fee={}", username, address, amount,
 				minAmount, fee);
 		if (amount.compareTo(coins.getMinCollectAmount()) <= 0) {
