@@ -76,7 +76,7 @@ public class WalletController {
 		logger.info("create new wallet:account={},password={}", account, password);
 		try {
 			BtcBean btcBean = btcAccountGenerator.createBtcAccount();
-			accountService.saveOne(account, btcBean.getFile(), btcBean.getBtcAddress(), "");
+			accountService.saveBTCOne(account, btcBean.getFile(), btcBean.getBtcAddress(), "");
 			MessageResult result = new MessageResult(0, "success");
 			result.setData(btcBean.getBtcAddress());
 			return result;
