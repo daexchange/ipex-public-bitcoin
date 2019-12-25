@@ -54,7 +54,7 @@ public class BitcoinWatcher extends Watcher {
 						}
 						String address = prevout.getString("addr");
 						
-						if (StringUtils.isNotBlank(address) && accountService.isAddressExist(address)) {
+						if (StringUtils.isNotBlank(address) && accountService.isAddressExist(address.toLowerCase())) {
 							flag = true;
 							//BigDecimal balance = new BigDecimal(blockExplorer.getAddress(address).getFinalBalance());
 							List<BalanceData> balanceList = utxoTransactionService.getBalance(address);
@@ -73,7 +73,7 @@ public class BitcoinWatcher extends Watcher {
 					for (int j = 0; j < outArray.size(); j++) {
 						JSONObject out = outArray.getJSONObject(j);
 						String address = out.getString("addr");
-						if (StringUtils.isNotBlank(address) && accountService.isAddressExist(address)) {
+						if (StringUtils.isNotBlank(address) && accountService.isAddressExist(address.toLowerCase())) {
 							BigDecimal amount = out.getBigDecimal("value").divide(bitcoin).setScale(8,
 									BigDecimal.ROUND_DOWN);
 							Deposit deposit = new Deposit();
