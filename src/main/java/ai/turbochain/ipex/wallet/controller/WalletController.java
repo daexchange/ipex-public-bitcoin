@@ -48,7 +48,8 @@ public class WalletController {
 	@GetMapping("height")
 	public MessageResult getHeight() {
 		try {
-			String resultStr = HttpRequest.sendGetData(Constant.ACT_BLOCKNO_LATEST, "");
+			String resultStr = HttpRequest
+					.sendGetData(Constant.ACT_BLOCKNO_LATEST + "?api_code=818ac2ad-fd55-426a-93e3-bc861dc2061f", "");
 			JSONObject resultObj = JSONObject.parseObject(resultStr);
 			Long height = resultObj.getLong("height");
 			MessageResult result = new MessageResult(0, "success");

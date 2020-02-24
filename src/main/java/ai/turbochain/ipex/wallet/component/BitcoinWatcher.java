@@ -26,16 +26,16 @@ public class BitcoinWatcher extends Watcher {
 	private UTXOTransactionService utxoTransactionService;
 	// 比特币单位转换聪
 	private BigDecimal bitcoin = new BigDecimal("100000000");
-	//private BlockExplorer blockExplorer = new BlockExplorer();
+	// private BlockExplorer blockExplorer = new BlockExplorer();
 
 	@Override
 	public List<Deposit> replayBlock(Long startBlockNumber, Long endBlockNumber) {
 		List<Deposit> deposits = new ArrayList<Deposit>();
 		try {
 			for (Long blockHeight = startBlockNumber; blockHeight <= endBlockNumber; blockHeight++) {
-				System.out.println("区块"+blockHeight);
-				String blockHeightData = HttpRequest
-						.sendGetData(Constant.ACT_BLOCKNO_HEIGHT + blockHeight + Constant.FORMAT_PARAM, "");
+				System.out.println("区块" + blockHeight);
+				String blockHeightData = HttpRequest.sendGetData(
+						Constant.ACT_BLOCKNO_HEIGHT + blockHeight + Constant.FORMAT_PARAM + Constant.APICODE_PARAM, "");
 				JSONObject jsonObject = JSONObject.parseObject(blockHeightData);
 				JSONArray blocksArray = jsonObject.getJSONArray("blocks");
 				String blockHash = blocksArray.getJSONObject(0).getString("hash");
@@ -53,10 +53,11 @@ public class BitcoinWatcher extends Watcher {
 							continue;
 						}
 						String address = prevout.getString("addr");
-						
+
 						if (StringUtils.isNotBlank(address) && accountService.isAddressExist(address)) {
 							flag = true;
-							//BigDecimal balance = new BigDecimal(blockExplorer.getAddress(address).getFinalBalance());
+							// BigDecimal balance = new
+							// BigDecimal(blockExplorer.getAddress(address).getFinalBalance());
 							List<BalanceData> balanceList = utxoTransactionService.getBalance(address);
 							BigDecimal balances = new BigDecimal("0");
 							for (BalanceData balance : balanceList) {
@@ -108,7 +109,8 @@ public class BitcoinWatcher extends Watcher {
 	public Long getNetworkBlockHeight() {
 		try {
 			// 获取最新块的块高
-			String result = HttpRequest.sendGetData(Constant.ACT_BLOCKNO_LATEST, "");
+			String result = HttpRequest
+					.sendGetData(Constant.ACT_BLOCKNO_LATEST + "?api_code=818ac2ad-fd55-426a-93e3-bc861dc2061f", "");
 			JSONObject resultObj = JSONObject.parseObject(result);
 			return resultObj.getLong("height");
 		} catch (Exception e) {
